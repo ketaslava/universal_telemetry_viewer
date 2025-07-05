@@ -1,5 +1,7 @@
 import os
 import json
+from datetime import datetime
+
 import matplotlib.pyplot as plt
 from orca.debug import println
 from sympy import floor
@@ -70,7 +72,9 @@ def count_statements(user_actions, statement):
     statements_count = 0
     for user in user_actions:
         if statement in user_actions[user]:
-            statements_count += len(user_actions[user][statement])
+            for date in user_actions[user][statement]:
+                if START_TIME < int(date) < END_TIME:
+                    statements_count += 1
     return statements_count
 
 
@@ -79,7 +83,10 @@ def count_users_with_existent_statement(user_actions, statement):
     users_count = 0
     for user in user_actions:
         if statement in user_actions[user]:
-            users_count += 1
+            for date in user_actions[user][statement]:
+                if START_TIME < int(date) < END_TIME:
+                    users_count += 1
+                    continue
     return users_count
 
 
@@ -184,6 +191,10 @@ def sort_and_unpack_popularity_dictionary(dictionary):
     return keys, values
 
 
+def parse_date(s: str) -> int:
+    return int(datetime.strptime(s, "%Y/%m/%d").timestamp())
+
+
 def display_data(data, non_json_files, non_standard_files):
 
     # ---- Setup ---- #
@@ -196,66 +207,31 @@ def display_data(data, non_json_files, non_standard_files):
 
     # Add statements
 
-    # Activity
-    user_actions = add_statement_per_user(data, user_actions,
-                                          "statementType", "sixHoursActivityReport")
-
-    # Installations
-    user_actions = add_statement_per_user(data, user_actions,
-                                          "statementType", "newInstallationLaunchReport")
+    # Statements
+    for statement in STATEMENTS:
+        user_actions = add_statement_per_user(data, user_actions,
+                                              "statementType", statement)
 
     # Checkpoints
-    user_actions = add_statement_per_user(data, user_actions,
-                                          "checkpointName", "secondLaunch")
-    user_actions = add_statement_per_user(data, user_actions,
-                                          "checkpointName", "recordingSavedFirstTime")
-    user_actions = add_statement_per_user(data, user_actions,
-                                          "checkpointName", "recordingPreviewPlayedFirstTime")
-    user_actions = add_statement_per_user(data, user_actions,
-                                          "checkpointName", "recordingLoadedFirstTime")
+    for checkpoint in CHECKPOINTS:
+        user_actions = add_statement_per_user(data, user_actions,
+                                              "checkpointName", checkpoint)
 
     # Functions
-    user_actions = add_statement_per_user(data, user_actions,
-                                          "checkpointName", "recordingSaved")
-    user_actions = add_statement_per_user(data, user_actions,
-                                          "checkpointName", "recordingPreviewPlayed")
-    user_actions = add_statement_per_user(data, user_actions,
-                                          "checkpointName", "recordingLoaded")
+    for function in FUNCTIONS:
+        user_actions = add_statement_per_user(data, user_actions,
+                                              "usedFunctionName", function)
 
     # ---- Activity ---- #
 
-    # Activity graph (1H)
-    graph_name = "Active users per hour"
-    statement = "sixHoursActivityReport"
-    time_step = 3600  # 1 hour
-    # Calculate graph data
-    graph_data = calculate_graph_data_by_statements_count_per_time(
-        user_actions, statement, START_TIME, END_TIME, time_step, True)
-    create_graph(graph_data, graph_name)
-
-    # Activity graph (1d)
-    graph_name = "Active users per day"
-    statement = "sixHoursActivityReport"
-    time_step = 86400  # 1 day
-    graph_data = calculate_graph_data_by_statements_count_per_time(
-        user_actions, statement, START_TIME, END_TIME, time_step, True)
-    create_graph(graph_data, graph_name)
-
-    # Activity graph (1W)
-    graph_name = "Active users per week"
-    statement = "sixHoursActivityReport"
-    time_step = 604800  # 1 week
-    graph_data = calculate_graph_data_by_statements_count_per_time(
-        user_actions, statement, START_TIME, END_TIME, time_step, True)
-    create_graph(graph_data, graph_name)
-
-    # Activity graph (1M)
-    graph_name = "Active users per month"
-    statement = "sixHoursActivityReport"
-    time_step = 2419200  # 1 month
-    graph_data = calculate_graph_data_by_statements_count_per_time(
-        user_actions, statement, START_TIME, END_TIME, time_step, True)
-    create_graph(graph_data, graph_name)
+    # Activity graph (1H, 1D, 1W, 1M)
+    for time_step in [[3600, "hour"], [86400, "day"], [604800, "week"], [2419200, "month"]]:
+        graph_name = f"Active users per {time_step[1]}"
+        statement = "sixHoursActivityReport"
+        # Calculate graph data
+        graph_data = calculate_graph_data_by_statements_count_per_time(
+            user_actions, statement, START_TIME, END_TIME, time_step[0], True)
+        create_graph(graph_data, graph_name)
 
     # New installation launches
     graph_name = "New installation launches per day"
@@ -326,19 +302,24 @@ def display_data(data, non_json_files, non_standard_files):
 
     # Calculate, how many days user lifetime lasts X: days Y: amount of users
     for user in user_actions:
-        if "sixHoursActivityReport" in user_actions[user]:
-            dates = user_actions[user][statement]
-            lowest_time = dates[0]
-            highest_time = dates[0]
-            for date in dates:
-                if date < lowest_time:
-                    lowest_time = date
-                if date > highest_time:
-                    highest_time = date
-            days = int(floor((int(highest_time) - int(lowest_time)) / time_step_day))
-            while len(lifetime_duration_days) <= days:
-                lifetime_duration_days.append(0)
-            lifetime_duration_days[days] += 1
+        if "sixHoursActivityReport" not in user_actions[user]:
+            continue
+        dates = user_actions[user][statement]
+        if len(dates) <= 1:
+            continue
+        lowest_time = START_TIME
+        highest_time = END_TIME
+        for date in dates:
+            if date < lowest_time:
+                lowest_time = date
+            if date > highest_time:
+                highest_time = date
+        if lowest_time == highest_time:
+            continue
+        days = int(floor((int(highest_time) - int(lowest_time)) / time_step_day))
+        while len(lifetime_duration_days) <= days:
+            lifetime_duration_days.append(0)
+        lifetime_duration_days[days] += 1
 
     # Create graph
     create_graph(lifetime_duration_days, graph_name)
@@ -354,8 +335,12 @@ def display_data(data, non_json_files, non_standard_files):
     # Count
     for frame in data:
         if (("statementType" not in frame) or ("deviceType" not in frame) or
-                (frame.get("statementType") != "newInstallationLaunchReport")):
+                (frame["statementType"] != "newInstallationLaunchReport")):
             continue # Skip non newInstallationLaunchReport types
+
+        # Check time
+        if not (START_TIME < int(frame["unixTime"]) < END_TIME):
+            continue
 
         # Process platforms
         platform_popularity = count_popularity_of_statement_variants(
@@ -396,9 +381,22 @@ def display_data(data, non_json_files, non_standard_files):
 TELEMETRY_DIR = "collected_telemetry"
 REPORT_DIR = "telemetry_report_for_openaudiotools"
 STATS_FILE = "statistics.txt"
+
 # Time frame
-START_TIME = 1751612400
-END_TIME = 1751665363
+START_TIME = parse_date("2025/07/4")
+END_TIME = parse_date("2025/07/5")
+
+# Events
+CHECKPOINTS = [
+  "secondLaunch", "recordingSavedFirstTime", "recordingPreviewPlayedFirstTime", "recordingLoadedFirstTime"
+]
+FUNCTIONS = [
+  "recordingSaved", "recordingPreviewPlayed", "recordingLoaded"
+]
+STATEMENTS = [
+  "sixHoursActivityReport", "newInstallationLaunchReport"
+]
+
 
 # Process
 data_rows, non_json, non_standard = load_telemetry_data()
