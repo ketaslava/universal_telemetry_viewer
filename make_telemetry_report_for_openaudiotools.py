@@ -304,16 +304,17 @@ def display_data(data, non_json_files, non_standard_files):
     for user in user_actions:
         if "sixHoursActivityReport" not in user_actions[user]:
             continue
-        dates = user_actions[user][statement]
+        dates = user_actions[user]["sixHoursActivityReport"]
         if len(dates) <= 1:
             continue
         lowest_time = START_TIME
         highest_time = END_TIME
         for date in dates:
-            if date < lowest_time:
-                lowest_time = date
-            if date > highest_time:
-                highest_time = date
+            date_int = int(date)
+            if date_int < lowest_time:
+                lowest_time = date_int
+            if date_int > highest_time:
+                highest_time = date_int
         if lowest_time == highest_time:
             continue
         days = int(floor((int(highest_time) - int(lowest_time)) / time_step_day))
@@ -384,7 +385,7 @@ STATS_FILE = "statistics.txt"
 
 # Time frame
 START_TIME = parse_date("2025/07/4")
-END_TIME = parse_date("2025/07/5")
+END_TIME = parse_date("2025/07/7")
 
 # Events
 CHECKPOINTS = [
