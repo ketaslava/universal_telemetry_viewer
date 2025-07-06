@@ -129,7 +129,7 @@ def calculate_graph_data_by_statements_count_per_time(
     return graph_data
 
 
-def create_graph(graph_data, graph_name, custom_x_labels=None):
+def create_graph(graph_data, graph_name, custom_x_labels=None, x_labels_shift = 0):
 
     # Get X labels
     x_labels = []
@@ -139,7 +139,7 @@ def create_graph(graph_data, graph_name, custom_x_labels=None):
         x_labels = custom_x_labels
     else:
         # Create X labels
-        point_number = 0
+        point_number = x_labels_shift
         for _ in graph_data:
             point_number += 1
             x_labels.append(str(point_number))
@@ -296,8 +296,7 @@ def display_data(data, non_json_files, non_standard_files):
 
     # ---- User lifetime ---- #
 
-    lifetime_duration_days = []
-    graph_name = "User lifetime duration days"
+    lifetime_duration_days = [0, 0]
     time_step_day = 86400  # 1 day
 
     # Calculate, how many days user lifetime lasts X: days Y: amount of users
@@ -306,6 +305,7 @@ def display_data(data, non_json_files, non_standard_files):
             continue
         dates = user_actions[user]["sixHoursActivityReport"]
         if len(dates) <= 1:
+            lifetime_duration_days[0] += 1
             continue
         lowest_time = START_TIME
         highest_time = END_TIME
@@ -322,8 +322,15 @@ def display_data(data, non_json_files, non_standard_files):
             lifetime_duration_days.append(0)
         lifetime_duration_days[days] += 1
 
-    # Create graph
-    create_graph(lifetime_duration_days, graph_name)
+    # Create graph (all)
+    create_graph(lifetime_duration_days,
+                 "User lifetime duration days")
+
+    # Create graph (2 days and more)
+    lifetime_duration_days_2_and_more = lifetime_duration_days
+    lifetime_duration_days_2_and_more.pop(0)
+    create_graph(lifetime_duration_days_2_and_more,
+                 "User lifetime duration days (2 days and more)", x_labels_shift=1)
 
     # ---- User Info Report ---- #
 
