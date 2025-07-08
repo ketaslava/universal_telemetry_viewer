@@ -144,6 +144,13 @@ def create_graph(graph_data, graph_name, custom_x_labels=None, x_labels_shift = 
             point_number += 1
             x_labels.append(str(point_number))
 
+    # Cleanup X labels
+    x_labels = list(x_labels)
+    i = 0
+    while i < len(x_labels):
+        x_labels[i] = str(x_labels[i]).replace('\n', ' ')
+        i += 1
+
     # Plot the graph
     plt.figure(figsize=(12, 5))
     plt.plot(x_labels, graph_data, marker='o', linestyle='-', color='teal')
@@ -221,7 +228,12 @@ def display_data(data, non_json_files, non_standard_files):
     for function in FUNCTIONS:
         user_actions = add_statement_per_user(data, user_actions,
                                               "usedFunctionName", function)
-
+    
+    # Device types
+    for device_type in DEVICE_TYPES:
+        user_actions = add_statement_per_user(data, user_actions,
+                                              "deviceType", device_type)
+                                              
     # ---- Activity ---- #
 
     # Activity graph (1H, 1D, 1W, 1M)
@@ -257,6 +269,14 @@ def display_data(data, non_json_files, non_standard_files):
     # New installation launch report
     count = count_users_with_existent_statement(user_actions, "newInstallationLaunchReport")
     append_statistics_line(f"New installations launch report: {count}")
+    
+    # Android install launches
+    count = count_users_with_existent_statement(user_actions, "Android")
+    append_statistics_line(f"Android install launches: {count}")
+    
+    # Desktop install launches
+    count = count_users_with_existent_statement(user_actions, "Desktop")
+    append_statistics_line(f"Desktop install launches: {count}")
 
     # Checkpoints
     append_statistics_line(f"")
@@ -384,6 +404,11 @@ def display_data(data, non_json_files, non_standard_files):
     keys, values = sort_and_unpack_popularity_dictionary(timezone_popularity)
     create_graph(values, "Time Zone Popularity", keys)
 
+    keys, values = sort_and_unpack_popularity_dictionary(timezone_popularity)
+    keys = keys[:23]
+    values = values[:23]
+    create_graph(values, "Time Zone Popularity (24 most popular)", keys)
+
 
 # Config
 TELEMETRY_DIR = "collected_telemetry"
@@ -392,7 +417,7 @@ STATS_FILE = "statistics.txt"
 
 # Time frame
 START_TIME = parse_date("2025/07/4")
-END_TIME = parse_date("2025/07/7")
+END_TIME = parse_date("2025/07/8")
 
 # Events
 CHECKPOINTS = [
@@ -403,6 +428,9 @@ FUNCTIONS = [
 ]
 STATEMENTS = [
   "sixHoursActivityReport", "newInstallationLaunchReport"
+]
+DEVICE_TYPES = [
+  "Android", "Desktop"
 ]
 
 
