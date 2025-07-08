@@ -398,15 +398,22 @@ def display_data(data, non_json_files, non_standard_files):
     keys, values = sort_and_unpack_popularity_dictionary(language_popularity)
     create_graph(values, "Language Popularity", keys)
 
+    keys, values = sort_and_unpack_popularity_dictionary(language_popularity)
+    keys = keys[:23]; values = values[:23]
+    create_graph(values, "Language Popularity (24 most popular)", keys)
+
     keys, values = sort_and_unpack_popularity_dictionary(country_popularity)
-    create_graph(values, "Country Popularity", keys)
+    create_graph(values, "Country Popularity (By region settings)", keys)
+
+    keys, values = sort_and_unpack_popularity_dictionary(country_popularity)
+    keys = keys[:23]; values = values[:23]
+    create_graph(values, "Country Popularity (By region settings) (24 most popular)", keys)
 
     keys, values = sort_and_unpack_popularity_dictionary(timezone_popularity)
     create_graph(values, "Time Zone Popularity", keys)
 
     keys, values = sort_and_unpack_popularity_dictionary(timezone_popularity)
-    keys = keys[:23]
-    values = values[:23]
+    keys = keys[:23]; values = values[:23]
     create_graph(values, "Time Zone Popularity (24 most popular)", keys)
 
 
