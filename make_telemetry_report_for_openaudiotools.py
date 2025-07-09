@@ -327,15 +327,15 @@ def display_data(data, non_json_files, non_standard_files):
         if len(dates) <= 1:
             lifetime_duration_days[0] += 1
             continue
-        lowest_time = START_TIME
-        highest_time = END_TIME
+        lowest_time = END_TIME
+        highest_time = START_TIME
         for date in dates:
             date_int = int(date)
             if date_int < lowest_time:
                 lowest_time = date_int
             if date_int > highest_time:
                 highest_time = date_int
-        if lowest_time == highest_time:
+        if lowest_time >= highest_time:
             continue
         days = int(floor((int(highest_time) - int(lowest_time)) / time_step_day))
         while len(lifetime_duration_days) <= days:
@@ -424,7 +424,7 @@ STATS_FILE = "statistics.txt"
 
 # Time frame
 START_TIME = parse_date("2025/07/4")
-END_TIME = parse_date("2025/07/8")
+END_TIME = parse_date("2025/07/10")
 
 # Events
 CHECKPOINTS = [
