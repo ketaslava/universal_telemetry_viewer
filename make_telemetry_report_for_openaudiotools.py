@@ -1,5 +1,6 @@
 import os
 import json
+import shutil
 from datetime import datetime
 
 import matplotlib.pyplot as plt
@@ -13,36 +14,54 @@ def check_required_data_structure(data):
 
 
 def load_telemetry_data():
-
+    non_txt_count = 0
     non_json_count = 0
     non_standard_count = 0
     files_data = []
 
+    # Define report subdirs
+    non_txt_dir = os.path.join(REPORT_DIR, "non_txt")
+    txt_non_json_dir = os.path.join(REPORT_DIR, "txt_non_json")
+    txt_json_non_standard_dir = os.path.join(REPORT_DIR, "txt_json_non_standard")
+
+    # Make sure they exist
+    os.makedirs(non_txt_dir, exist_ok=True)
+    os.makedirs(txt_non_json_dir, exist_ok=True)
+    os.makedirs(txt_json_non_standard_dir, exist_ok=True)
+
     for filename in os.listdir(TELEMETRY_DIR):
+        src_path = os.path.join(TELEMETRY_DIR, filename)
+
+        # Skip directories silently like a mature program
+        if not os.path.isfile(src_path):
+            continue
 
         # Read only .txt files
         if not filename.endswith(".txt"):
+            non_txt_count += 1
+            shutil.copy2(src_path, non_txt_dir)
             continue
 
         # Read only json files + count non json
-        current_file_path = os.path.join(TELEMETRY_DIR, filename)
         try:
-            with open(current_file_path, 'r', encoding='utf-8') as f:
+            with open(src_path, "r", encoding="utf-8") as f:
                 content = f.read().strip()
             file_data = json.loads(content)
         except (json.JSONDecodeError, UnicodeDecodeError, OSError):
             non_json_count += 1
+            shutil.copy2(src_path, txt_non_json_dir)
             continue
 
         # Count non-standard files and skip
         if not check_required_data_structure(file_data):
             non_standard_count += 1
+            shutil.copy2(src_path, txt_json_non_standard_dir)
             continue
 
-        # Collect data
+        # Collect valid data
         files_data.append(file_data)
 
-    return files_data, non_json_count, non_standard_count
+    return files_data, non_txt_count, non_json_count, non_standard_count
 
 
 def get_users_action_structure(data):
@@ -202,7 +221,7 @@ def parse_date(s: str) -> int:
     return int(datetime.strptime(s, "%Y/%m/%d").timestamp())
 
 
-def display_data(data, non_json_files, non_standard_files):
+def display_data(data, non_txt_files, non_json_files, non_standard_files):
 
     # ---- Setup ---- #
 
@@ -259,6 +278,7 @@ def display_data(data, non_json_files, non_standard_files):
     append_statistics_line(f"Statistics:")
 
     # Not included files
+    append_statistics_line(f"Non-TXT files: {non_txt_files}")
     append_statistics_line(f"Non-JSON files: {non_json_files}")
     append_statistics_line(f"Non-standard JSON files: {non_standard_files}")
 
@@ -422,9 +442,9 @@ TELEMETRY_DIR = "collected_telemetry"
 REPORT_DIR = "telemetry_report_for_openaudiotools"
 STATS_FILE = "statistics.txt"
 
-# Time frame
-START_TIME = parse_date("2025/07/4")
-END_TIME = parse_date("2025/07/10")
+# Time frame [YYYY/MM/DD]
+START_TIME = parse_date("2025/07/12")
+END_TIME = parse_date("2026/1/18")
 
 # Events
 CHECKPOINTS = [
@@ -442,5 +462,5 @@ DEVICE_TYPES = [
 
 
 # Process
-data_rows, non_json, non_standard = load_telemetry_data()
-display_data(data_rows, non_json_files=non_json, non_standard_files=non_standard)
+data_rows, non_txt, non_json, non_standard = load_telemetry_data()
+display_data(data_rows, non_txt_files=non_txt, non_json_files=non_json, non_standard_files=non_standard)
