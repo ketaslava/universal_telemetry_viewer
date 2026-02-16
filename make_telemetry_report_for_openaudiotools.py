@@ -433,7 +433,7 @@ def display_data(data, non_txt_files, non_json_files, non_standard_files):
     for data_frame in data:
         if (data_frame.get("statementType") == "sixHoursUsageTimeReport" and
                 data_frame.get("appName") == "OpenAudioTools"):
-            total_usage_time += int(data_frame["usageTime"])
+            total_usage_time += int(data_frame.get("usageTime"))
     append_statistics_line(f"Total usage time: {total_usage_time}")
 
     # ---- User lifetime ---- #
@@ -546,7 +546,7 @@ STATS_FILE = "statistics.txt"
 
 # Time frame [YYYY/MM/DD]
 START_TIME = parse_date("2025/07/12")
-END_TIME = parse_date("2026/2/16")
+END_TIME = parse_date("2026/2/17")
 
 # Events
 CHECKPOINTS = [
