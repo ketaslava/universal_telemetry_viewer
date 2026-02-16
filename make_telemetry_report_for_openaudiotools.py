@@ -259,8 +259,7 @@ def display_data(data, non_txt_files, non_json_files, non_standard_files):
     os.makedirs(text_feedback_dir, exist_ok=True)
 
     for data_frame in data:
-        if (data_frame.get("statementType") == "userFeedback" and
-                data_frame.get("feedbackType") == "Text" and
+        if (data_frame.get("statementType") == "userFeedbackFormWith5StarRatingAndText" and
                 data_frame.get("appName") == "OpenAudioTools"):
 
             try:
@@ -289,8 +288,7 @@ def display_data(data, non_txt_files, non_json_files, non_standard_files):
     ratings_per_day = {}
 
     for data_frame in data:
-        if (data_frame.get("statementType") == "userFeedback" and
-                data_frame.get("feedbackType") == "5StarRating" and
+        if (data_frame.get("statementType") == "userFeedbackFormWith5StarRatingAndText" and
                 data_frame.get("appName") == "OpenAudioTools"):
 
             try:
@@ -308,7 +306,7 @@ def display_data(data, non_txt_files, non_json_files, non_standard_files):
 
             # Parse rating
             try:
-                rating = int(data_frame.get("rating"))
+                rating = int(data_frame.get("5StarRating"))
                 if rating < 1 or rating > 5:
                     rating = 0
             except (TypeError, ValueError):
@@ -566,5 +564,6 @@ DEVICE_TYPES = [
 
 
 # Process
+shutil.rmtree(REPORT_DIR)
 data_rows, non_txt, non_json, non_standard = load_telemetry_data()
 display_data(data_rows, non_txt_files=non_txt, non_json_files=non_json, non_standard_files=non_standard)
