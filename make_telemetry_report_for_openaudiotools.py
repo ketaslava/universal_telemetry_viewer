@@ -252,7 +252,93 @@ def display_data(data, non_txt_files, non_json_files, non_standard_files):
     for device_type in DEVICE_TYPES:
         user_actions = add_statement_per_user(data, user_actions,
                                               "deviceType", device_type)
-                                              
+
+    # ---- Text Reviews ---- #
+
+    text_feedback_dir = os.path.join(REPORT_DIR, "user_feedback_text")
+    os.makedirs(text_feedback_dir, exist_ok=True)
+
+    for data_frame in data:
+        if (data_frame.get("statementType") == "userFeedback" and
+                data_frame.get("feedbackType") == "Text" and
+                data_frame.get("appName") == "OpenAudioTools"):
+
+            try:
+                unix_time = int(data_frame.get("unixTime"))
+            except (TypeError, ValueError):
+                continue
+
+            # Respect global time window
+            if not (START_TIME < unix_time < END_TIME):
+                continue
+
+            # Build date-based filename
+            date_str = datetime.fromtimestamp(unix_time).strftime("%Y_%m_%d")
+            day_file = os.path.join(text_feedback_dir, f"{date_str}.txt")
+
+            # Sanitize text: force single-line review
+            text = str(data_frame.get("text", "")).replace("\n", " ").replace("\r", " ").strip()
+
+            line = f"{unix_time} | {data_frame.get('appVersion')} | {data_frame.get('installationId')} | {text}"
+
+            with open(day_file, "a", encoding="utf-8") as f:
+                f.write(line + "\n")
+
+    # ---- Star Reviews ---- #
+
+    ratings_per_day = {}
+
+    for data_frame in data:
+        if (data_frame.get("statementType") == "userFeedback" and
+                data_frame.get("feedbackType") == "5StarRating" and
+                data_frame.get("appName") == "OpenAudioTools"):
+
+            try:
+                unix_time = int(data_frame.get("unixTime"))
+            except (TypeError, ValueError):
+                continue
+
+            if not (START_TIME < unix_time < END_TIME):
+                continue
+
+            day_key = datetime.fromtimestamp(unix_time).strftime("%Y-%m-%d")
+
+            if day_key not in ratings_per_day:
+                ratings_per_day[day_key] = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
+
+            # Parse rating
+            try:
+                rating = int(data_frame.get("rating"))
+                if rating < 1 or rating > 5:
+                    rating = 0
+            except (TypeError, ValueError):
+                rating = 0
+
+            ratings_per_day[day_key][rating] += 1
+
+    # Write aggregated report
+    rating_file = os.path.join(REPORT_DIR, "user_feedback_rating.txt")
+    with open(rating_file, "w", encoding="utf-8") as f:
+        for day in sorted(ratings_per_day.keys()):
+            counts = ratings_per_day[day]
+
+            total_valid = sum(star * counts[star] for star in range(1, 6))
+            total_votes = sum(counts[star] for star in range(1, 6))
+            avg = (total_valid / total_votes) if total_votes else 0
+
+            line = (
+                f"{day} | "
+                f"0 Star (error): {counts[0]} | "
+                f"1 Star: {counts[1]} | "
+                f"2 Star: {counts[2]} | "
+                f"3 Star: {counts[3]} | "
+                f"4 Star: {counts[4]} | "
+                f"5 Star: {counts[5]} | "
+                f"Rating: {avg:.2f}"
+            )
+
+            f.write(line + "\n")
+
     # ---- Activity ---- #
 
     # Activity graph (1H, 1D, 1W, 1M)
@@ -333,6 +419,24 @@ def display_data(data, non_txt_files, non_json_files, non_standard_files):
     # Recording loaded
     count = count_statements(user_actions, "recordingLoaded")
     append_statistics_line(f"Recording loaded: {count}")
+    
+    # Functions
+    append_statistics_line(f"")
+    append_statistics_line(f"Activity:")
+    
+    # Six hours activity report
+    count = count_statements(user_actions, "sixHoursActivityReport")
+    append_statistics_line(f"Six hours activity reports: {count}")
+
+    # Total usage time
+    count = count_statements(user_actions, "sixHoursUsageTimeReport")
+    append_statistics_line(f"Six hours usage time reports: {count}")
+    total_usage_time = 0
+    for data_frame in data:
+        if (data_frame.get("statementType") == "sixHoursUsageTimeReport" and
+                data_frame.get("appName") == "OpenAudioTools"):
+            total_usage_time += int(data_frame["usageTime"])
+    append_statistics_line(f"Total usage time: {total_usage_time}")
 
     # ---- User lifetime ---- #
 
@@ -444,7 +548,7 @@ STATS_FILE = "statistics.txt"
 
 # Time frame [YYYY/MM/DD]
 START_TIME = parse_date("2025/07/12")
-END_TIME = parse_date("2026/1/18")
+END_TIME = parse_date("2026/2/16")
 
 # Events
 CHECKPOINTS = [
