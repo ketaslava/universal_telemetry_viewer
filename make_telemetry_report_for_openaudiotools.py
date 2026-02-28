@@ -1,7 +1,7 @@
 import os
 import json
 import shutil
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import matplotlib.pyplot as plt
 from orca.debug import println
@@ -356,6 +356,52 @@ def display_data(data, non_txt_files, non_json_files, non_standard_files):
         user_actions, statement, START_TIME, END_TIME, time_step, True)
     create_graph(graph_data, graph_name)
 
+    # ---- Usage Time Per Day Graph (including zero days) ---- #
+
+    usage_time_per_day = {}
+
+    for data_frame in data:
+        if (data_frame.get("statementType") == "sixHoursUsageTimeReport" and
+                data_frame.get("appName") == "OpenAudioTools"):
+
+            try:
+                unix_time = int(data_frame.get("unixTime"))
+                usage_time = int(data_frame.get("usageTime"))
+            except (TypeError, ValueError):
+                continue
+
+            if not (START_TIME < unix_time < END_TIME):
+                continue
+
+            day_key = datetime.fromtimestamp(unix_time).strftime("%Y-%m-%d")
+
+            if day_key not in usage_time_per_day:
+                usage_time_per_day[day_key] = 0
+
+            usage_time_per_day[day_key] += usage_time
+
+    # Generate ALL days in range
+    current_day = datetime.fromtimestamp(START_TIME)
+    end_day = datetime.fromtimestamp(END_TIME)
+
+    graph_data = []
+    x_labels = []
+
+    while current_day <= end_day:
+        day_key = current_day.strftime("%Y-%m-%d")
+
+        value = usage_time_per_day.get(day_key, 0)
+        graph_data.append(value)
+        x_labels.append(day_key)
+
+        current_day += timedelta(days=1)
+
+    create_graph(
+        graph_data,
+        "Usage time per day (seconds)",
+        custom_x_labels=x_labels
+    )
+
     # ---- Installations, Checkpoints, Functions ---- #
 
     # Statistics
@@ -434,6 +480,7 @@ def display_data(data, non_txt_files, non_json_files, non_standard_files):
         if (data_frame.get("statementType") == "sixHoursUsageTimeReport" and
                 data_frame.get("appName") == "OpenAudioTools"):
             total_usage_time += int(data_frame.get("usageTime"))
+            # print(int(data_frame.get("usageTime")))
     append_statistics_line(f"Total usage time: {total_usage_time}")
 
     # ---- User lifetime ---- #
@@ -546,7 +593,7 @@ STATS_FILE = "statistics.txt"
 
 # Time frame [YYYY/MM/DD]
 START_TIME = parse_date("2025/07/12")
-END_TIME = parse_date("2026/2/17")
+END_TIME = parse_date("2026/2/27")
 
 # Events
 CHECKPOINTS = [
@@ -556,7 +603,7 @@ FUNCTIONS = [
   "recordingSaved", "recordingPreviewPlayed", "recordingLoaded"
 ]
 STATEMENTS = [
-  "sixHoursActivityReport", "newInstallationLaunchReport"
+  "sixHoursActivityReport", "newInstallationLaunchReport", "sixHoursUsageTimeReport"
 ]
 DEVICE_TYPES = [
   "Android", "Desktop"
